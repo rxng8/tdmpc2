@@ -73,7 +73,7 @@ class Pixels(gym.Wrapper):
 		self._size = size
 
 	def _get_obs(self, is_reset=False):
-		frame = self.env.render(width=self._size, height=self._size).transpose(2, 0, 1)
+		frame = self.env.render(width=self._size, height=self._size).transpose(2, 0, 1) # (C, H, W)
 		num_frames = self._frames.maxlen if is_reset else 1
 		for _ in range(num_frames):
 			self._frames.append(frame)

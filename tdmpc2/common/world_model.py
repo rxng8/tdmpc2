@@ -102,10 +102,13 @@ class WorldModel(nn.Module):
 		Encodes an observation into its latent representation.
 		This implementation assumes a single state-based observation.
 		"""
+		# print(f"[WorldModel.encode] obs before: {obs}")
 		if self.cfg.multitask:
 			obs = self.task_emb(obs, task)
+			# print(f"[WorldModel.encode] obs after multi task: {obs}")
 		if (self.cfg.obs == 'rgb' or self.cfg.obs.startswith("image") or "image" in self.cfg.obs) and obs.ndim == 5:
 			return torch.stack([self._encoder[self.cfg.obs](o) for o in obs])
+		# print(f"[WolrdModel.encode] after: {obs}")
 		return self._encoder[self.cfg.obs](obs)
 
 	def next(self, z, a, task):

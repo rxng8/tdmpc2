@@ -135,10 +135,12 @@ class TDMPC2(torch.nn.Module):
 			torch.Tensor: Action to take in the environment.
 		"""
 		obs = obs.to(self.device, non_blocking=True).unsqueeze(0)
+		# print(f"[TDMPC2.act] obs: {obs}")
 		if task is not None:
 			task = torch.tensor([task], device=self.device)
 		if self.cfg.mpc:
 			return self.plan(obs, t0=t0, eval_mode=eval_mode, task=task).cpu()
+		# print(f"[TDMPC2.act] obs after plan: {obs}")
 		z = self.model.encode(obs, task)
 		action, info = self.model.pi(z, task)
 		if eval_mode:
@@ -172,6 +174,7 @@ class TDMPC2(torch.nn.Module):
 		Returns:
 			torch.Tensor: Action to take in the environment.
 		"""
+		# print(f"[TDMPC2._plan] obs: {obs}")
 		# Sample policy trajectories
 		z = self.model.encode(obs, task)
 		if self.cfg.num_pi_trajs > 0:

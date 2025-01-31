@@ -90,11 +90,13 @@ class OnlineTrainer(Trainer):
 					self._ep_idx = self.buffer.add(torch.cat(self._tds))
 
 				obs = self.env.reset()
-				print(f"[OnlineTrainer] done -- obs: {obs}")
+				# print(f"[OnlineTrainer] done -- obs: {obs}") # (...) # no batch
 				self._tds = [self.to_td(obs)]
 
 			# Collect experience
 			if self._step > self.cfg.seed_steps:
+				# print(f"[OnlineTrainer] agent act: obs: {obs.shape}")
+				# NOTE: The observation passed to action is in shape (...), no batch
 				action = self.agent.act(obs, t0=len(self._tds)==1)
 			else:
 				action = self.env.rand_act()
