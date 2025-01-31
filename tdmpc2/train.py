@@ -1,3 +1,6 @@
+# %%
+
+import sys
 import os
 os.environ['MUJOCO_GL'] = os.getenv("MUJOCO_GL", 'egl')
 os.environ['LAZY_LEGACY_OP'] = '0'
@@ -10,7 +13,7 @@ import torch
 import hydra
 from termcolor import colored
 
-from common.parser import parse_cfg
+from common.parser import parse_cfg, dict_cfg_to_dataclass
 from common.seed import set_seed
 from common.buffer import Buffer
 from envs import make_env
@@ -46,6 +49,7 @@ def train(cfg: dict):
 	assert torch.cuda.is_available()
 	assert cfg.steps > 0, 'Must train for at least 1 step.'
 	cfg = parse_cfg(cfg)
+	cfg = dict_cfg_to_dataclass(cfg)
 	set_seed(cfg.seed)
 	print(colored('Work dir:', 'yellow', attrs=['bold']), cfg.work_dir)
 
@@ -62,4 +66,8 @@ def train(cfg: dict):
 
 
 if __name__ == '__main__':
+	# sys.argv = ['', 'task=mw-pick-place-wall', 'steps=3000']
+	# python tdmpc2/tdmpc2/train.py task=mw-pick-place-wall steps=3000
+	# python tdmpc2/tdmpc2/train.py task=mw-pick-place-wall steps=3000 work_dir=test wandb_silent=True enable_wandb=False
 	train()
+

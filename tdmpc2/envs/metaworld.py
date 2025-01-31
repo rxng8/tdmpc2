@@ -15,14 +15,15 @@ class MetaWorldWrapper(gym.Wrapper):
 		self.env._freeze_rand_vec = False
 
 	def reset(self, **kwargs):
-		obs = super().reset(**kwargs).astype(np.float32)
+		obs, info = super().reset(**kwargs)
+		obs = obs.astype(np.float32)
 		self.env.step(np.zeros(self.env.action_space.shape))
 		return obs
 
 	def step(self, action):
 		reward = 0
 		for _ in range(2):
-			obs, r, _, info = self.env.step(action.copy())
+			obs, r, _, _, info = self.env.step(action.copy())
 			reward += r
 		obs = obs.astype(np.float32)
 		return obs, reward, False, info
@@ -48,5 +49,5 @@ def make_env(cfg):
 	env = ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[env_id](seed=cfg.seed)
 	env = MetaWorldWrapper(env, cfg)
 	env = Timeout(env, max_episode_steps=100)
-	env.max_episode_steps = env._max_episode_steps
+	# env.max_episode_steps = env._max_episode_steps
 	return env

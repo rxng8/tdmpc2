@@ -1,5 +1,6 @@
 import dataclasses
 import os
+import pathlib
 import datetime
 import re
 
@@ -32,7 +33,7 @@ def make_dir(dir_path):
 		os.makedirs(dir_path)
 	except OSError:
 		pass
-	return dir_path
+	return pathlib.Path(dir_path)
 
 
 def print_run(cfg):
