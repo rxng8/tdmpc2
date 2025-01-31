@@ -25,6 +25,21 @@ def cfg_to_dataclass(cfg, frozen=False):
 	dataclass.get = get
 	return dataclass()
 
+def dict_cfg_to_dataclass(cfg_dict: dict):
+	"""
+	Converts an OmegaConf config to a dataclass object.
+	This prevents graph breaks when used with torch.compile.
+	"""
+	fields = []
+	for key, value in cfg_dict.items():
+		fields.append((key, Any, dataclasses.field(default_factory=lambda value_=value: value_)))
+	dataclass_name = "Config"
+	dataclass = dataclasses.make_dataclass(dataclass_name, fields, frozen=False)
+	def get(self, val, default=None):
+		return getattr(self, val, default)
+	dataclass.get = get
+	return dataclass()
+
 
 def parse_cfg(cfg: OmegaConf) -> OmegaConf:
 	"""
@@ -54,8 +69,8 @@ def parse_cfg(cfg: OmegaConf) -> OmegaConf:
 			pass
 
 	# Convenience
-	cfg.work_dir = Path(hydra.utils.get_original_cwd()) / 'logs' / cfg.task / str(cfg.seed) / cfg.exp_name
-	cfg.task_title = cfg.task.replace("-", " ").title()
+	# cfg.work_dir = Path(hydra.utils.get_original_cwd()) / 'logs' / cfg.task / str(cfg.seed) / cfg.exp_name
+	# cfg.task_title = cfg.task.replace("-", " ").title()
 	cfg.bin_size = (cfg.vmax - cfg.vmin) / (cfg.num_bins-1) # Bin size for discrete regression
 
 	# Model size
@@ -77,4 +92,5 @@ def parse_cfg(cfg: OmegaConf) -> OmegaConf:
 		cfg.task_dim = 0
 	cfg.tasks = TASK_SET.get(cfg.task, [cfg.task])
 
-	return cfg_to_dataclass(cfg)
+	# return cfg_to_dataclass(cfg)
+	return OmegaConf.to_container(cfg)
