@@ -91,4 +91,4 @@ def gumbel_softmax_sample(p, temperature=1.0, dim=0):
 	)  # ~Gumbel(0,1)
 	gumbels = (logits + gumbels) / temperature  # ~Gumbel(logits,tau)
 	y_soft = gumbels.softmax(dim)
-	return y_soft.argmax(-1)
+	return y_soft.argmax(dim)
