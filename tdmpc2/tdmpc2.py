@@ -177,6 +177,7 @@ class TDMPC2(torch.nn.Module):
 		# print(f"[TDMPC2._plan] obs: {obs}")
 		# Sample policy trajectories
 		z = self.model.encode(obs, task)
+		print(f"[_plan] z: {z.shape}")
 		if self.cfg.num_pi_trajs > 0:
 			pi_actions = torch.empty(self.cfg.horizon, self.cfg.num_pi_trajs, self.cfg.action_dim, device=self.device)
 			_z = z.repeat(self.cfg.num_pi_trajs, 1)
@@ -184,6 +185,7 @@ class TDMPC2(torch.nn.Module):
 				pi_actions[t], _ = self.model.pi(_z, task)
 				_z = self.model.next(_z, pi_actions[t], task)
 			pi_actions[-1], _ = self.model.pi(_z, task)
+		print(f"[_plan] pi_actions: {pi_actions.shape}")
 
 		# Initialize state and parameters
 		z = z.repeat(self.cfg.num_samples, 1)
@@ -194,6 +196,7 @@ class TDMPC2(torch.nn.Module):
 		actions = torch.empty(self.cfg.horizon, self.cfg.num_samples, self.cfg.action_dim, device=self.device)
 		if self.cfg.num_pi_trajs > 0:
 			actions[:, :self.cfg.num_pi_trajs] = pi_actions
+		print(f"[_plan] actions: {actions.shape}")
 
 		# Iterate MPPI
 		for _ in range(self.cfg.iterations):
@@ -206,17 +209,27 @@ class TDMPC2(torch.nn.Module):
 			if self.cfg.multitask:
 				actions = actions * self.model._action_masks[task]
 
+			print(f"[_plan] actions: {actions.shape}")
+
 			# Compute elite actions
-			value = self._estimate_value(z, actions, task).nan_to_num(0)
-			elite_idxs = torch.topk(value.squeeze(1), self.cfg.num_elites, dim=0).indices
-			elite_value, elite_actions = value[elite_idxs], actions[:, elite_idxs]
+			value = self._estimate_value(z, actions, task).nan_to_num(0) # (N, 1)
+			print(f"[_plan] value: {value.shape}")
+			elite_idxs = torch.topk(value.squeeze(1), self.cfg.num_elites, dim=0).indices # (N,) => (K,)
+			elite_value, elite_actions = value[elite_idxs], actions[:, elite_idxs] # (K, 1), (H, K, A)
+
+			print(f"[_plan] elite_value: {elite_value.shape}") # (K, 1)
+			print(f"[_plan] elite_actions: {elite_actions.shape}") # (H, K, A)
 
 			# Update parameters
-			max_value = elite_value.max(0).values
-			score = torch.exp(self.cfg.temperature*(elite_value - max_value))
-			score = score / score.sum(0)
+			max_value = elite_value.max(0).values # ()
+			score = torch.exp(self.cfg.temperature*(elite_value - max_value)) # (K, 1)
+			print(f"[_plan] score :{score.shape}")
+			score = score / score.sum(0) # (K, 1)
+			print(f"[_plan] score :{score.shape}")
 			mean = (score.unsqueeze(0) * elite_actions).sum(dim=1) / (score.sum(0) + 1e-9)
+			print(f"[_plan] mean :{mean.shape}")
 			std = ((score.unsqueeze(0) * (elite_actions - mean.unsqueeze(1)) ** 2).sum(dim=1) / (score.sum(0) + 1e-9)).sqrt()
+			print(f"[_plan] std :{std.shape}")
 			std = std.clamp(self.cfg.min_std, self.cfg.max_std)
 			if self.cfg.multitask:
 				mean = mean * self.model._action_masks[task]
@@ -224,11 +237,15 @@ class TDMPC2(torch.nn.Module):
 
 		# Select action
 		rand_idx = math.gumbel_softmax_sample(score.squeeze(1))  # gumbel_softmax_sample is compatible with cuda graphs
+		print(f"[_plan] rand_idx: {rand_idx.shape}")
 		actions = torch.index_select(elite_actions, 1, rand_idx).squeeze(1)
+		print(f"[_plan] actions: {actions.shape}")
 		a, std = actions[0], std[0]
 		if not eval_mode:
 			a = a + std * torch.randn(self.cfg.action_dim, device=std.device)
 		self._prev_mean.copy_(mean)
+		print(f"[_plan] a: {a.shape}")
+		print("-----------------------------------------")
 		return a.clamp(-1, 1)
 
 	def update_pi(self, zs, task):
